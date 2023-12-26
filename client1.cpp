@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct hostent *h;
-    if ((h = gethostbyname(argv[1])) == 0) {
+    if ((h = gethostbyname(argv[1])) == nullptr) {
         std::cout << "gethostbyname failed" << std::endl;
         close(socketfd);
         return -1;
