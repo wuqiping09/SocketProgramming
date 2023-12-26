@@ -14,7 +14,7 @@ TCPClient::TCPClient(): m_clientfd(-1) {
 }
 
 TCPClient::~TCPClient() {
-
+    close();
 }
 
 bool TCPClient::connect(const std::string &ip, const unsigned short port) {
@@ -87,7 +87,6 @@ int main(int argc, char *argv[]) {
         perror("connect");
         return -1;
     }
-
     for (int i = 0; i < 3; ++i) {
         std::string buffer = "This is the " + std::to_string(i + 1) + "th message";
         if (!tcpClient.send(buffer)) {
@@ -103,7 +102,5 @@ int main(int argc, char *argv[]) {
         std::cout << "Message received: " << buffer << std::endl;
         sleep(1);
     }
-
-    tcpClient.close();
     return 0;
 }
