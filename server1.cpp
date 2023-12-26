@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
     memset(&serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
     serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // inet_addr() can only translate ip address, not domain name, so it is not used by client
+    //serveraddr.sin_addr.s_addr = inet_addr("172.24.139.111");
     serveraddr.sin_port = htons(atoi(argv[1]));
     if (bind(listenfd, reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)) != 0) {
         perror("bind");
