@@ -47,10 +47,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    // there are three read event:
+    // there are three kinds of read event:
     // 1. client connect
     // 2. server have data to recv
     // 3. client disconnect
+    // there is one kind of write event:
+    // 1. server's send buffer still has space to write
 
     fd_set readfds; // 1024 bits bitmap
     FD_ZERO(&readfds); // set every bit in bitmap to 0
