@@ -1,3 +1,6 @@
+#ifndef TCPSERVER_H
+#define TCPSERVER_H
+
 #include <string>
 
 class TCPServer {
@@ -6,10 +9,11 @@ public:
     ~TCPServer();
     bool init(const unsigned short port);
     bool accept();
-    bool send(const std::string &buffer);
-    bool recv(std::string &buffer, const std::size_t maxlen);
+    bool send(void *buffer, const std::size_t len);
+    bool recv(void *buffer, const std::size_t maxlen);
     bool closeClientfd();
     bool closeListenfd();
+    bool recvFile(const char *filename, const std::size_t len);
     const std::string& clientIP() const;
 
 private:
@@ -19,3 +23,5 @@ private:
     std::string m_ip; // client ip address
     unsigned short m_port;
 };
+
+#endif

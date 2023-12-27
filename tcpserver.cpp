@@ -1,5 +1,7 @@
 #include "tcpserver.h"
+#include "fileinfo.h"
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -56,25 +58,21 @@ bool TCPServer::accept() {
     return true;
 }
 
-bool TCPServer::send(const std::string &buffer) {
+bool TCPServer::send(void *buffer, const std::size_t len) {
     if (m_clientfd == -1) {
         return false;
     }
-    if (::send(m_clientfd, buffer.data(), buffer.size(), 0) <= 0) {
+    if (::send(m_clientfd, buffer, len, 0) <= 0) {
         return false;
     }
     return true;
 }
 
-bool TCPServer::recv(std::string &buffer, const std::size_t maxlen) {
-    buffer.clear();
-    buffer.resize(maxlen);
-    int readlen = ::recv(m_clientfd, &buffer[0], buffer.size(), 0);
+bool TCPServer::recv(void *buffer, const std::size_t maxlen) {
+    int readlen = ::recv(m_clientfd, buffer, maxlen, 0);
     if (readlen <= 0) {
-        buffer.clear();
         return false;
     }
-    buffer.resize(readlen);
     return true;
 }
 
@@ -96,13 +94,37 @@ bool TCPServer::closeListenfd() {
     return true;
 }
 
+bool TCPServer::recvFile(const char *filename, const std::size_t len) {
+    std::ofstream out(filename, std::ios::binary);
+    if (!out.is_open()) {
+        std::cout << "Fail to open " << filename << std::endl;
+        return false;
+    }
+    std::size_t totalbytes = 0;
+    std::size_t numbytes = 0;
+    char buffer[10];
+    while (true) {
+        numbytes = len - totalbytes > 10 ? 10 : len - totalbytes;
+        if (!recv(static_cast<void*>(buffer), numbytes)) {
+            return false;
+        }
+        out.write(buffer, numbytes);
+        totalbytes += numbytes;
+        if (totalbytes == len) {
+            break;
+        }
+    }
+    out.close();
+    return true;
+}
+
 const std::string& TCPServer::clientIP() const {
     return m_ip;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        std::cout << "Usage: ./tcpserver serverPort" << std::endl;
+    if (argc != 3) {
+        std::cout << "Usage: ./tcpserver serverPort outputFile" << std::endl;
         return -1;
     }
 
@@ -119,18 +141,27 @@ int main(int argc, char *argv[]) {
     std::cout << "Client connected, ip = " << tcpserver.clientIP() << std::endl;
 
     while (true) {
-        std::string buffer;
-        if (!tcpserver.recv(buffer, 1024)) {
+        FileInfo fileinfo;
+        if (!tcpserver.recv(static_cast<void*>(&fileinfo), sizeof(fileinfo))) {
             perror("recv");
             break;
         }
-        std::cout << "Message received: " << buffer << std::endl;
-        buffer = "OK";
-        if (!tcpserver.send(buffer)) {
+        std::cout << "Fileinfo received:" << std::endl;
+        std::cout << "filename = " << fileinfo.filename << std::endl;
+        std::cout << "filesize = " << fileinfo.filesize << std::endl;
+
+        std::string ok = "OK";
+        if (!tcpserver.send(static_cast<void*>(&ok), ok.size())) {
             perror("send");
             break;
         }
-        std::cout << "Message sent: " << buffer << std::endl;
+        std::cout << "Message sent: " << ok << std::endl;
+
+        if (!tcpserver.recvFile(argv[2], fileinfo.filesize)) {
+            std::cout << "Fail to receive file" << std::endl;
+            break;
+        }
+        std::cout << "File received" << std::endl;
     }
 
     return 0;
