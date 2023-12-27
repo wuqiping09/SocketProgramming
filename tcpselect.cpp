@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
     // there are three kinds of read event:
     // 1. client connect
-    // 2. server have data to recv
+    // 2. server has data to recv
     // 3. client disconnect
     // there is one kind of write event:
     // 1. server's send buffer still has space to write
