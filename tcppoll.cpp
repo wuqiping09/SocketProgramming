@@ -117,5 +117,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    close(listensock);
     return 0;
 }
