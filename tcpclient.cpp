@@ -31,8 +31,7 @@ bool TCPClient::connect(const std::string &ip, const unsigned short port) {
 
     struct hostent *h;
     if ((h = gethostbyname(ip.data())) == nullptr) {
-        ::close(m_clientfd);
-        m_clientfd = -1;
+        close();
         return false;
     }
     struct sockaddr_in serveraddr;
@@ -42,8 +41,7 @@ bool TCPClient::connect(const std::string &ip, const unsigned short port) {
 
     // :: indicates using the libaray function, not the member function
     if (::connect(m_clientfd, reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)) != 0) {
-        ::close(m_clientfd);
-        m_clientfd = -1;
+        close();
         return false;
     }
 
@@ -82,6 +80,11 @@ bool TCPClient::close() {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        std::cout << "Usage: ./tcpclient serverIP serverPort" << std::endl;
+        return -1;
+    }
+
     TCPClient tcpClient;
     if (!tcpClient.connect(std::string(argv[1]), atoi(argv[2]))) {
         perror("connect");
