@@ -9,12 +9,12 @@
 #include <sys/epoll.h>
 #include <netinet/tcp.h>
 
-void setNonBlock(int fd) {
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-}
+// void setNonBlock(int fd) {
+//     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+// }
 
 int initserver(unsigned short port) {
-    int listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (listenfd == -1) {
         perror("socket");
         return -1;
@@ -24,8 +24,6 @@ int initserver(unsigned short port) {
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof(opt)));
     setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof(opt)));
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof(opt)));
-
-    setNonBlock(listenfd);
 
     struct sockaddr_in serveraddr;
     memset(static_cast<void*>(&serveraddr), 0, sizeof(serveraddr));
@@ -87,25 +85,24 @@ int main(int argc, char *argv[]) {
 
         // traverse returned events
         for (int i = 0; i < infds; ++i) {
-            if (evs[i].data.fd == listensock) { // client try to connect
-                struct sockaddr_in clientaddr;
-                socklen_t len = sizeof(clientaddr);
-                int clientsock = accept(listensock, reinterpret_cast<sockaddr*>(&clientaddr), &len);
-                if (clientsock < 0) {
-                    perror("accept");
-                    continue;
-                }
-                setNonBlock(clientsock);
-                std::cout << "clientsock = " << clientsock << std::endl;
-                ev.data.fd = clientsock;
-                ev.events = EPOLLIN | EPOLLET;
-                epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock, &ev);
-            } else { // client might send data or might disconnect
-                if (evs[i].events & EPOLLRDHUP) { // client disconnect, some OS may not support this signal
-                    std::cout << "clientsock " << evs[i].data.fd << " disconnect" << std::endl;
-                    close(evs[i].data.fd); // close clientsock
-                    // if a socket is closed, it will automatically be deleted from epollfd
-                } else if (evs[i].events & (EPOLLIN | EPOLLPRI)) { // has data to recv
+            if (evs[i].events & EPOLLRDHUP) { // client disconnect, some OS may not support this signal
+                std::cout << "clientsock " << evs[i].data.fd << " disconnect" << std::endl;
+                close(evs[i].data.fd); // close clientsock
+                // if a socket is closed, it will automatically be deleted from epollfd
+            } else if (evs[i].events & (EPOLLIN | EPOLLPRI)) { // read event
+                if (evs[i].data.fd == listensock) { // client try to connect
+                    struct sockaddr_in clientaddr;
+                    socklen_t len = sizeof(clientaddr);
+                    int clientsock = accept4(listensock, reinterpret_cast<sockaddr*>(&clientaddr), &len, SOCK_NONBLOCK);
+                    if (clientsock < 0) {
+                        perror("accept");
+                        continue;
+                    }
+                    std::cout << "clientsock = " << clientsock << std::endl;
+                    ev.data.fd = clientsock;
+                    ev.events = EPOLLIN | EPOLLET;
+                    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock, &ev);
+                } else { // client might send data or might disconnect
                     char buffer[1024];
                     while (true) {
                         memset(static_cast<void*>(buffer), 0, sizeof(buffer));
@@ -124,12 +121,12 @@ int main(int argc, char *argv[]) {
                             break;
                         }
                     }
-                } else if (evs[i].events & EPOLLOUT) {
-                    continue;
-                } else { // error
-                    std::cout << "clientsock " << evs[i].data.fd << " error" << std::endl;
-                    close(evs[i].data.fd);
                 }
+            } else if (evs[i].events & EPOLLOUT) { // write event
+                continue;
+            } else { // error
+                std::cout << "clientsock " << evs[i].data.fd << " error" << std::endl;
+                close(evs[i].data.fd);
             }
         }
     }
