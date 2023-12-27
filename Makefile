@@ -1,12 +1,30 @@
 CC = g++
-COMPILERFLAGS = -g -o
+COMPILERFLAGS = -g
 
-.PHONY: all clean
+.PHONY: all clean obj debug
 
-all :
-#	$(CC) $(COMPILERFLAGS) client1 client1.cpp
-#	$(CC) $(COMPILERFLAGS) server1 server1.cpp
-	$(CC) $(COMPILERFLAGS) tcpclient tcpclient.cpp
+CPP_FILES := $(notdir $(shell find -name "*.cpp"))
+OBJ_FILES := $(patsubst %.cpp,obj/%.o,$(CPP_FILES))
+EXE_FILES := $(patsubst %,bin/%,$(basename $(CPP_FILES)))
+
+all : $(EXE_FILES)
 
 clean :
-	$(RM) server1 client1 tcpclient
+	$(RM) \
+		$(OBJ_FILES) \
+		$(EXE_FILES)
+
+obj/%.o : %.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(COMPILERFLAGS) -o $@ -c $<
+
+obj : $(OBJ_FILES)
+
+bin/% : obj/%.o
+	@mkdir -p $(dir $@)
+	$(CC) $(COMPILERFLAGS) $< -o $@
+
+debug :
+	@echo $(CPP_FILES)
+	@echo $(OBJ_FILES)
+	@echo $(EXE_FILES)
