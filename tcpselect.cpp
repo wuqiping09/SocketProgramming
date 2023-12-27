@@ -65,6 +65,14 @@ int main(int argc, char *argv[]) {
         fd_set temp = readfds; // copy the bitmap, since select will write the bitmap
         //int infds = select(maxfd + 1, &temp, nullptr, nullptr, &timeout);
         int infds = select(maxfd + 1, &temp, nullptr, nullptr, nullptr); // no timeout
+        if (infds < 0) {
+            perror("select");
+            break;
+        }
+        if (infds == 0) {
+            std::cout << "select timeout" << std::endl;
+            continue;
+        }
 
         // traverse the bitmap
         for (int eid = 0; eid <= maxfd; ++eid) {
