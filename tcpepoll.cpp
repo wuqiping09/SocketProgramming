@@ -38,7 +38,7 @@ int initserver(unsigned short port) {
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        std::cout << "Usage: ./tcpselect port" << std::endl;
+        std::cout << "Usage: ./tcpepoll port" << std::endl;
     }
 
     int listensock = initserver(static_cast<unsigned short>(atoi(argv[1])));
