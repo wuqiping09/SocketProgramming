@@ -1,3 +1,4 @@
+#include "inetaddress.h"
 #include <iostream>
 #include <cstdio>
 #include <unistd.h>
@@ -13,48 +14,69 @@
 //     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 // }
 
-int initserver(unsigned short port) {
+// int initserver(unsigned short port) {
+//     int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+//     if (listenfd == -1) {
+//         perror("socket");
+//         return -1;
+//     }
+
+//     int opt = 1;
+//     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof(opt)));
+//     setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof(opt)));
+//     setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof(opt)));
+
+//     struct sockaddr_in serveraddr;
+//     memset(static_cast<void*>(&serveraddr), 0, sizeof(serveraddr));
+//     serveraddr.sin_family = AF_INET;
+//     serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+//     serveraddr.sin_port = htons(port);
+//     if (bind(listenfd, reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)) != 0) {
+//         perror("bind");
+//         close(listenfd);
+//         return -1;
+//     }
+
+//     constexpr int MAX_CONNECTION = 128;
+//     if (listen(listenfd, MAX_CONNECTION) != 0) {
+//         perror("listen");
+//         close(listenfd);
+//         return -1;
+//     }
+
+//     return listenfd;
+// }
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        std::cout << "Usage: ./tcpepollnonblock ip port" << std::endl;
+        return -1;
+    }
+
     int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (listenfd == -1) {
         perror("socket");
         return -1;
     }
+    std::cout << "listenfd = " << listenfd << std::endl;
 
     int opt = 1;
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof(opt)));
     setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof(opt)));
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof(opt)));
 
-    struct sockaddr_in serveraddr;
-    memset(static_cast<void*>(&serveraddr), 0, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serveraddr.sin_port = htons(port);
-    if (bind(listenfd, reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)) != 0) {
+    InetAddress serveraddr(std::string(argv[1]), static_cast<unsigned short>(atoi(argv[2])));
+    if (bind(listenfd, serveraddr.addr(), sizeof(sockaddr)) != 0) {
         perror("bind");
         close(listenfd);
         return -1;
     }
+    std::cout << "server ip = " << serveraddr.ip() << " , port = " << serveraddr.port() << std::endl;
 
     constexpr int MAX_CONNECTION = 128;
     if (listen(listenfd, MAX_CONNECTION) != 0) {
         perror("listen");
         close(listenfd);
-        return -1;
-    }
-
-    return listenfd;
-}
-
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        std::cout << "Usage: ./tcpepollnonblock port" << std::endl;
-    }
-
-    int listensock = initserver(static_cast<unsigned short>(atoi(argv[1])));
-    std::cout << "listensock = " << listensock << std::endl;
-    if (listensock == -1) {
-        std::cout << "init fail" << std::endl;
         return -1;
     }
 
@@ -67,9 +89,9 @@ int main(int argc, char *argv[]) {
 
     int epollfd = epoll_create(1); // any parameter greater than 0 is ok
     epoll_event ev;
-    ev.data.fd = listensock;
+    ev.data.fd = listenfd;
     ev.events = EPOLLIN; // EPOLLIN is read event, EPOLLOUT is write event, default is level trigger
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, listensock, &ev);
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);
     epoll_event evs[10]; // store returned events
 
     while (true) {
@@ -90,15 +112,17 @@ int main(int argc, char *argv[]) {
                 close(evs[i].data.fd); // close clientsock
                 // if a socket is closed, it will automatically be deleted from epollfd
             } else if (evs[i].events & (EPOLLIN | EPOLLPRI)) { // read event
-                if (evs[i].data.fd == listensock) { // client try to connect
-                    struct sockaddr_in clientaddr;
-                    socklen_t len = sizeof(clientaddr);
-                    int clientsock = accept4(listensock, reinterpret_cast<sockaddr*>(&clientaddr), &len, SOCK_NONBLOCK);
+                if (evs[i].data.fd == listenfd) { // client try to connect
+                    struct sockaddr_in peeraddr;
+                    socklen_t len = sizeof(sockaddr_in);
+                    int clientsock = accept4(listenfd, reinterpret_cast<sockaddr*>(&peeraddr), &len, SOCK_NONBLOCK);
                     if (clientsock < 0) {
                         perror("accept");
                         continue;
                     }
                     std::cout << "clientsock = " << clientsock << std::endl;
+                    InetAddress clientaddr(peeraddr);
+                    std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
                     ev.data.fd = clientsock;
                     ev.events = EPOLLIN | EPOLLET; // edge trigger
                     epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock, &ev);
@@ -132,6 +156,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    close(listensock);
+    close(listenfd);
     return 0;
 }
