@@ -1,5 +1,9 @@
 #include "inetaddress.h"
 
+InetAddress::InetAddress() {
+
+}
+
 InetAddress::InetAddress(const std::string &ip, const unsigned short port) {
     m_addr.sin_family = AF_INET;
     m_addr.sin_addr.s_addr = inet_addr(ip.c_str());
@@ -24,4 +28,9 @@ const unsigned short InetAddress::port() const {
 
 const sockaddr* InetAddress::addr() const {
     return reinterpret_cast<const sockaddr*>(&m_addr);
+}
+
+InetAddress& InetAddress::operator=(const sockaddr_in &addr) {
+    m_addr = addr;
+    return *this;
 }

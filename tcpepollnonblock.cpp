@@ -1,5 +1,7 @@
 #include "inetaddress.h"
+#include "socket.h"
 #include <iostream>
+#include <memory>
 #include <cstdio>
 #include <unistd.h>
 #include <stdlib.h>
@@ -53,32 +55,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (listenfd == -1) {
-        perror("socket");
-        return -1;
-    }
-    std::cout << "listenfd = " << listenfd << std::endl;
-
-    int opt = 1;
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof(opt)));
-    setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof(opt)));
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof(opt)));
-
+    Socket socket(createfd());
     InetAddress serveraddr(std::string(argv[1]), static_cast<unsigned short>(atoi(argv[2])));
-    if (bind(listenfd, serveraddr.addr(), sizeof(sockaddr)) != 0) {
-        perror("bind");
-        close(listenfd);
-        return -1;
-    }
-    std::cout << "server ip = " << serveraddr.ip() << " , port = " << serveraddr.port() << std::endl;
-
-    constexpr int MAX_CONNECTION = 128;
-    if (listen(listenfd, MAX_CONNECTION) != 0) {
-        perror("listen");
-        close(listenfd);
-        return -1;
-    }
+    socket.setreuseaddr(true);
+    socket.setreuseport(true);
+    socket.settcpnodelay(true);
+    socket.bind(serveraddr);
+    socket.listen();
 
     // there are three kinds of read event:
     // 1. client connect
@@ -89,9 +72,9 @@ int main(int argc, char *argv[]) {
 
     int epollfd = epoll_create(1); // any parameter greater than 0 is ok
     epoll_event ev;
-    ev.data.fd = listenfd;
+    ev.data.fd = socket.fd();
     ev.events = EPOLLIN; // EPOLLIN is read event, EPOLLOUT is write event, default is level trigger
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, socket.fd(), &ev);
     epoll_event evs[10]; // store returned events
 
     while (true) {
@@ -112,20 +95,14 @@ int main(int argc, char *argv[]) {
                 close(evs[i].data.fd); // close clientsock
                 // if a socket is closed, it will automatically be deleted from epollfd
             } else if (evs[i].events & (EPOLLIN | EPOLLPRI)) { // read event
-                if (evs[i].data.fd == listenfd) { // client try to connect
-                    struct sockaddr_in peeraddr;
-                    socklen_t len = sizeof(sockaddr_in);
-                    int clientsock = accept4(listenfd, reinterpret_cast<sockaddr*>(&peeraddr), &len, SOCK_NONBLOCK);
-                    if (clientsock < 0) {
-                        perror("accept");
-                        continue;
-                    }
-                    std::cout << "clientsock = " << clientsock << std::endl;
-                    InetAddress clientaddr(peeraddr);
+                if (evs[i].data.fd == socket.fd()) { // client try to connect
+                    InetAddress clientaddr;
+                    Socket *clientsock = new Socket(socket.accept(clientaddr)); // it is a problem that no delete for this instance
+                    std::cout << "clientsock = " << clientsock->fd() << std::endl;
                     std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
-                    ev.data.fd = clientsock;
+                    ev.data.fd = clientsock->fd();
                     ev.events = EPOLLIN | EPOLLET; // edge trigger
-                    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock, &ev);
+                    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);
                 } else { // client might send data or might disconnect
                     char buffer[1024];
                     // use a loop to read all data when using edge trigger
@@ -156,6 +133,5 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    close(listenfd);
     return 0;
 }
