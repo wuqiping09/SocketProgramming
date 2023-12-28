@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     int epollfd = epoll_create(1); // any parameter greater than 0 is ok
     epoll_event ev;
     ev.data.fd = listensock;
-    ev.events = EPOLLIN; // EPOLLIN is read event, EPOLLOUT is write event
+    ev.events = EPOLLIN; // EPOLLIN is read event, EPOLLOUT is write event, default is level trigger
     epoll_ctl(epollfd, EPOLL_CTL_ADD, listensock, &ev);
     epoll_event evs[10]; // store returned events
 
@@ -100,10 +100,11 @@ int main(int argc, char *argv[]) {
                     }
                     std::cout << "clientsock = " << clientsock << std::endl;
                     ev.data.fd = clientsock;
-                    ev.events = EPOLLIN | EPOLLET;
+                    ev.events = EPOLLIN | EPOLLET; // edge trigger
                     epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock, &ev);
                 } else { // client might send data or might disconnect
                     char buffer[1024];
+                    // use a loop to read all data when using edge trigger
                     while (true) {
                         memset(static_cast<void*>(buffer), 0, sizeof(buffer));
                         ssize_t readbytes = read(evs[i].data.fd, static_cast<void*>(buffer), sizeof(buffer));
