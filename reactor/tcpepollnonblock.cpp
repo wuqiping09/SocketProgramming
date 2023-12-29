@@ -2,6 +2,7 @@
 #include "socket.h"
 #include "epoll.h"
 #include "channel.h"
+#include "eventloop.h"
 #include <iostream>
 #include <memory>
 #include <cstdio>
@@ -28,19 +29,13 @@ int main(int argc, char *argv[]) {
     socket.bind(serveraddr);
     socket.listen();
 
-    Epoll epoll;
-    std::unique_ptr<Channel> channel = std::make_unique<Channel>(socket.fd(), &epoll);
+    EventLoop eventloop;
+
+    std::unique_ptr<Channel> channel = std::make_unique<Channel>(socket.fd(), eventloop.getep());
     channel->enableRead();
     channel->setReadCallBack(std::bind(&Channel::newConnect, channel.get(), &socket));
 
-    while (true) {
-        std::vector<Channel*> channels = epoll.loop();
-
-        // traverse returned events
-        for (auto &ch : channels) {
-            ch->handleEvent();
-        }
-    }
+    eventloop.run();
 
     return 0;
 }
