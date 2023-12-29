@@ -29,15 +29,16 @@ int main(int argc, char *argv[]) {
     socket.listen();
 
     Epoll epoll;
-    std::unique_ptr<Channel> channel = std::make_unique<Channel>(socket.fd(), &epoll, true);
+    std::unique_ptr<Channel> channel = std::make_unique<Channel>(socket.fd(), &epoll);
     channel->enableRead();
+    channel->setReadCallBack(std::bind(&Channel::newConnect, channel.get(), &socket));
 
     while (true) {
         std::vector<Channel*> channels = epoll.loop();
 
         // traverse returned events
         for (auto &ch : channels) {
-            ch->handleEvent(&socket);
+            ch->handleEvent();
         }
     }
 

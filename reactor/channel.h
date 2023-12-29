@@ -4,12 +4,13 @@
 #include "epoll.h"
 #include "socket.h"
 #include <sys/epoll.h>
+#include <functional>
 
 class Epoll;
 
 class Channel {
 public:
-    Channel(int fd, Epoll *ep, bool isListen);
+    Channel(int fd, Epoll *ep);
     ~Channel();
     const int fd() const;
     const bool inepoll() const;
@@ -19,15 +20,18 @@ public:
     void enableRead();
     void setinepoll();
     void setrevent(uint32_t ev);
-    void handleEvent(Socket *serversock);
+    void handleEvent();
+    void newConnect(Socket *serversock);
+    void newData();
+    void setReadCallBack(std::function<void()> f);
 
 private:
     int m_fd;
     Epoll *m_ep;
     bool m_inepoll;
-    bool m_isListen;
     uint32_t m_event;
     uint32_t m_revent;
+    std::function<void()> readCallBack;
 };
 
 #endif
