@@ -4,10 +4,10 @@ COMPILERFLAGS = -g
 .PHONY: all clean obj debug
 
 #CPP_FILES := $(notdir $(shell find -name "*.cpp"))
-CPP_FILES := tcpepollnonblock.cpp inetaddress.cpp socket.cpp epoll.cpp channel.cpp
+CPP_FILES := main.cpp inetaddress.cpp socket.cpp epoll.cpp channel.cpp eventloop.cpp tcpserver.cpp
 OBJ_FILES := $(patsubst %.cpp,obj/%.o,$(CPP_FILES))
 #EXE_FILES := $(patsubst %,bin/%,$(basename $(CPP_FILES)))
-EXE_FILES := bin/tcpepollnonblock
+EXE_FILES := bin/main
 
 all : $(EXE_FILES)
 
@@ -26,7 +26,7 @@ obj : $(OBJ_FILES)
 # 	@mkdir -p $(dir $@)
 # 	$(CC) $(COMPILERFLAGS) $< -o $@
 
-bin/tcpepollnonblock : $(OBJ_FILES)
+bin/main : $(OBJ_FILES)
 	@mkdir -p $(dir $@)
 	$(CC) $(COMPILERFLAGS) $^ -o $@
 
