@@ -3,7 +3,7 @@
 #include "socket.h"
 #include <iostream>
 
-Channel::Channel(int fd, Epoll *ep): m_fd(fd), m_ep(ep), m_inepoll(false), m_event(0), m_revent(0) {
+Channel::Channel(int fd, const std::shared_ptr<Epoll> &ep): m_fd(fd), m_ep(ep), m_inepoll(false), m_event(0), m_revent(0) {
 
 }
 
@@ -61,14 +61,19 @@ void Channel::handleEvent() {
 
 void Channel::newConnect(Socket *serversock) {
     InetAddress clientaddr;
-    Socket *clientsock = new Socket(serversock->accept(clientaddr)); // it is a problem that no delete for this instance
+    //Socket *clientsock = new Socket(serversock->accept(clientaddr)); // it is a problem that no delete for this instance
+    std::shared_ptr<Socket> clientsock = std::make_shared<Socket>(serversock->accept(clientaddr));
     std::cout << "clientsock = " << clientsock->fd() << std::endl;
     std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
     // add clientsock to epoll
-    Channel *clientChannel = new Channel(clientsock->fd(), m_ep);
+    //Channel *clientChannel = new Channel(clientsock->fd(), m_ep);
+    std::shared_ptr<Channel> clientChannel = std::make_shared<Channel>(clientsock->fd(), m_ep);
     clientChannel->enableRead();
     clientChannel->setEdgeTrigger();
     clientChannel->setReadCallBack(std::bind(&Channel::newData, clientChannel));
+    // store socket pointer and channel pointer to epoll
+    clientChannel->addSocket(clientsock->fd(), clientsock);
+    clientChannel->addChannel(m_fd, clientChannel);
 }
 
 void Channel::newData() {
@@ -81,6 +86,9 @@ void Channel::newData() {
             std::cout << "clientsock " << m_fd << " disconnect" << std::endl;
             close(m_fd); // close clientsock
             // if a socket is closed, it will automatically be deleted from epollfd
+            // remove socket pointer and channel pointer from epoll, thus destruct them
+            m_ep->eraseSocket(m_fd);
+            m_ep->eraseChannel(m_fd);
             break;
         } else if (readbytes > 0) { // read success
             std::cout << "clientsock " << m_fd << " send: " << buffer << std::endl;
@@ -95,4 +103,20 @@ void Channel::newData() {
 
 void Channel::setReadCallBack(std::function<void()> f) {
     readCallBack = f;
+}
+
+void Channel::addSocket(int fd, std::shared_ptr<Socket> &socket) {
+    m_ep->addSocket(fd, socket);
+}
+
+void Channel::addChannel(int fd, std::shared_ptr<Channel> &channel) {
+    m_ep->addChannel(fd, channel);
+}
+
+void Channel::eraseSocket(int fd) {
+    m_ep->eraseSocket(fd);
+}
+
+void Channel::eraseChannel(int fd) {
+    m_ep->eraseChannel(fd);
 }

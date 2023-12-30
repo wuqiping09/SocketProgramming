@@ -9,10 +9,10 @@ public:
     EventLoop();
     ~EventLoop();
     void run();
-    Epoll* getep() const;
+    const std::shared_ptr<Epoll>& getep() const;
 
 private:
-    std::unique_ptr<Epoll> ep;
+    std::shared_ptr<Epoll> ep;
 };
 
 #endif

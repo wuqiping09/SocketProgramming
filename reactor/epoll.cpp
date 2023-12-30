@@ -18,9 +18,9 @@ std::vector<Channel*> Epoll::loop(int timeout) {
 
     int infds = epoll_wait(m_epollfd, m_events, Epoll::MAX_EVENTS, timeout);
     if (infds < 0) {
-            perror("epoll_wait");
-            exit(1);
-        }
+        perror("epoll_wait");
+        exit(1);
+    }
     if (infds == 0) {
         std::cout << "epoll timeout" << std::endl;
         return channels;
@@ -53,4 +53,25 @@ void Epoll::updateChannel(Channel *channel) {
         }
         channel->setinepoll();
     }
+}
+
+void Epoll::addSocket(int fd, std::shared_ptr<Socket> &socket) {
+    m_sockets[fd] = socket;
+}
+
+void Epoll::addChannel(int fd, std::shared_ptr<Channel> &channel) {
+    m_channels[fd] = channel;
+}
+
+void Epoll::eraseSocket(int fd) {
+    m_sockets.erase(fd);
+}
+
+void Epoll::eraseChannel(int fd) {
+    m_channels.erase(fd);
+}
+
+void Epoll::eraseAll() {
+    m_sockets.clear();
+    m_channels.clear();
 }

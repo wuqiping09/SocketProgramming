@@ -1,6 +1,6 @@
 #include "eventloop.h"
 
-EventLoop::EventLoop(): ep(new Epoll) {
+EventLoop::EventLoop(): ep(new Epoll()) {
 
 }
 
@@ -19,6 +19,6 @@ void EventLoop::run() {
     }
 }
 
-Epoll* EventLoop::getep() const {
-    return ep.get();
+const std::shared_ptr<Epoll>& EventLoop::getep() const {
+    return ep;
 }
