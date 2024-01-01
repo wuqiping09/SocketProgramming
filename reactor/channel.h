@@ -3,6 +3,8 @@
 
 #include "epoll.h"
 #include "socket.h"
+#include "inputdata.h"
+#include "resultdata.h"
 #include <sys/epoll.h>
 #include <functional>
 #include <memory>
@@ -32,6 +34,8 @@ private:
     uint32_t m_event;
     uint32_t m_revent;
     std::function<void()> readCallBack;
+
+    ResultData processData(InputData &data);
 };
 
 #endif

@@ -60,6 +60,7 @@ void Channel::handleEvent() {
 }
 
 void Channel::newData() {
+    InputData data;
     char buffer[1024];
     // use a loop to read all data when using edge trigger
     while (true) {
@@ -69,18 +70,28 @@ void Channel::newData() {
             std::cout << "clientsock " << m_fd << " disconnect" << std::endl;
             close(m_fd); // close clientsock
             m_ep->delConnection(m_fd);
-            break;
+            return;
         } else if (readbytes > 0) { // read success
-            std::cout << "clientsock " << m_fd << " send: " << buffer << std::endl;
-            send(m_fd, static_cast<void*>(buffer), strlen(buffer), 0);
+            strcpy(data.s + data.len, buffer);
+            data.len += strlen(buffer);
         } else if (readbytes == -1 && errno == EINTR) { // interrupt when reading
             break;
         } else if (readbytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) { // all data has been read
             break;
         }
     }
+    ResultData result = processData(data);
+    send(m_fd, static_cast<void*>(result.s), result.len, 0);
 }
 
 void Channel::setReadCallBack(std::function<void()> f) {
     readCallBack = f;
+}
+
+ResultData Channel::processData(InputData &data) {
+    std::cout << "clientsock " << m_fd << " send: " << data.s << std::endl;
+    ResultData res;
+    strcpy(res.s, data.s);
+    res.len = data.len;
+    return res;
 }
