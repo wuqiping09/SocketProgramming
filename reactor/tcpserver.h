@@ -14,6 +14,8 @@ public:
 private:
     EventLoop m_el;
     std::shared_ptr<Acceptor> acceptor;
+    std::shared_ptr<Socket> listensock;
+    std::shared_ptr<Channel> channel;
 };
 
 #endif

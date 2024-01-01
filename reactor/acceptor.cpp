@@ -21,7 +21,7 @@ void Acceptor::accept(std::shared_ptr<Socket> &serversock) {
     clientChannel->enableRead();
     clientChannel->setEdgeTrigger();
     clientChannel->setReadCallBack(std::bind(&Channel::newData, clientChannel));
-    // store socket pointer and channel pointer to epoll
-    clientChannel->addSocket(clientsock->fd(), clientsock);
-    clientChannel->addChannel(clientChannel->fd(), clientChannel);
+
+    std::shared_ptr<Connection> connection = std::make_shared<Connection>(clientsock, clientChannel);
+    m_ep->addConnection(clientsock->fd(), connection);
 }

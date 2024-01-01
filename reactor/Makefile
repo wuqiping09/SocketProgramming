@@ -12,7 +12,8 @@ CPP_FILES := \
 	channel.cpp \
 	eventloop.cpp \
 	tcpserver.cpp \
-	acceptor.cpp
+	acceptor.cpp \
+	connection.cpp
 OBJ_FILES := $(patsubst %.cpp,obj/%.o,$(CPP_FILES))
 #EXE_FILES := $(patsubst %,bin/%,$(basename $(CPP_FILES)))
 EXE_FILES := bin/main

@@ -55,23 +55,14 @@ void Epoll::updateChannel(Channel *channel) {
     }
 }
 
-void Epoll::addSocket(int fd, std::shared_ptr<Socket> &socket) {
-    m_sockets[fd] = socket;
+void Epoll::addConnection(int fd, std::shared_ptr<Connection> &connection) {
+    m_connections[fd] = connection;
 }
 
-void Epoll::addChannel(int fd, std::shared_ptr<Channel> &channel) {
-    m_channels[fd] = channel;
+void Epoll::delConnection(int fd) {
+    m_connections.erase(fd);
 }
 
-void Epoll::eraseSocket(int fd) {
-    m_sockets.erase(fd);
-}
-
-void Epoll::eraseChannel(int fd) {
-    m_channels.erase(fd);
-}
-
-void Epoll::eraseAll() {
-    m_sockets.clear();
-    m_channels.clear();
+void Epoll::delAllConnections() {
+    m_connections.clear();
 }

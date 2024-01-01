@@ -48,10 +48,7 @@ void Channel::handleEvent() {
     if (m_revent & EPOLLRDHUP) { // client disconnect, some OS may not support this signal
         std::cout << "clientsock " << m_fd << " disconnect" << std::endl;
         close(m_fd); // close clientsock
-        // if a socket is closed, it will automatically be deleted from epollfd
-        // remove socket pointer and channel pointer from epoll, thus destruct them
-        m_ep->eraseSocket(m_fd);
-        m_ep->eraseChannel(m_fd);
+        m_ep->delConnection(m_fd);
     } else if (m_revent & (EPOLLIN | EPOLLPRI)) { // read event
         readCallBack();
     } else if (m_revent & EPOLLOUT) { // write event
@@ -62,21 +59,6 @@ void Channel::handleEvent() {
     }
 }
 
-// void Channel::newConnect(Socket *serversock) {
-//     InetAddress clientaddr;
-//     std::shared_ptr<Socket> clientsock = std::make_shared<Socket>(serversock->accept(clientaddr));
-//     std::cout << "clientsock = " << clientsock->fd() << std::endl;
-//     std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
-//     // add clientsock to epoll
-//     std::shared_ptr<Channel> clientChannel = std::make_shared<Channel>(clientsock->fd(), m_ep);
-//     clientChannel->enableRead();
-//     clientChannel->setEdgeTrigger();
-//     clientChannel->setReadCallBack(std::bind(&Channel::newData, clientChannel));
-//     // store socket pointer and channel pointer to epoll
-//     clientChannel->addSocket(clientsock->fd(), clientsock);
-//     clientChannel->addChannel(clientChannel->fd(), clientChannel);
-// }
-
 void Channel::newData() {
     char buffer[1024];
     // use a loop to read all data when using edge trigger
@@ -86,10 +68,7 @@ void Channel::newData() {
         if (readbytes == 0) { // client disconnect
             std::cout << "clientsock " << m_fd << " disconnect" << std::endl;
             close(m_fd); // close clientsock
-            // if a socket is closed, it will automatically be deleted from epollfd
-            // remove socket pointer and channel pointer from epoll, thus destruct them
-            m_ep->eraseSocket(m_fd);
-            m_ep->eraseChannel(m_fd);
+            m_ep->delConnection(m_fd);
             break;
         } else if (readbytes > 0) { // read success
             std::cout << "clientsock " << m_fd << " send: " << buffer << std::endl;
@@ -104,20 +83,4 @@ void Channel::newData() {
 
 void Channel::setReadCallBack(std::function<void()> f) {
     readCallBack = f;
-}
-
-void Channel::addSocket(int fd, std::shared_ptr<Socket> &socket) {
-    m_ep->addSocket(fd, socket);
-}
-
-void Channel::addChannel(int fd, std::shared_ptr<Channel> &channel) {
-    m_ep->addChannel(fd, channel);
-}
-
-void Channel::eraseSocket(int fd) {
-    m_ep->eraseSocket(fd);
-}
-
-void Channel::eraseChannel(int fd) {
-    m_ep->eraseChannel(fd);
 }

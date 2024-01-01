@@ -22,13 +22,8 @@ public:
     void setinepoll();
     void setrevent(uint32_t ev);
     void handleEvent();
-    //void newConnect(Socket *serversock);
     void newData();
     void setReadCallBack(std::function<void()> f);
-    void addSocket(int fd, std::shared_ptr<Socket> &socket);
-    void addChannel(int fd, std::shared_ptr<Channel> &channel);
-    void eraseSocket(int fd);
-    void eraseChannel(int fd);
 
 private:
     int m_fd;
