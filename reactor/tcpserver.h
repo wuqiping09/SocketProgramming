@@ -13,6 +13,7 @@ public:
 
 private:
     EventLoop m_el;
+    std::shared_ptr<Acceptor> acceptor;
 };
 
 #endif

@@ -49,6 +49,9 @@ void Channel::handleEvent() {
         std::cout << "clientsock " << m_fd << " disconnect" << std::endl;
         close(m_fd); // close clientsock
         // if a socket is closed, it will automatically be deleted from epollfd
+        // remove socket pointer and channel pointer from epoll, thus destruct them
+        m_ep->eraseSocket(m_fd);
+        m_ep->eraseChannel(m_fd);
     } else if (m_revent & (EPOLLIN | EPOLLPRI)) { // read event
         readCallBack();
     } else if (m_revent & EPOLLOUT) { // write event
@@ -59,22 +62,20 @@ void Channel::handleEvent() {
     }
 }
 
-void Channel::newConnect(Socket *serversock) {
-    InetAddress clientaddr;
-    //Socket *clientsock = new Socket(serversock->accept(clientaddr)); // it is a problem that no delete for this instance
-    std::shared_ptr<Socket> clientsock = std::make_shared<Socket>(serversock->accept(clientaddr));
-    std::cout << "clientsock = " << clientsock->fd() << std::endl;
-    std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
-    // add clientsock to epoll
-    //Channel *clientChannel = new Channel(clientsock->fd(), m_ep);
-    std::shared_ptr<Channel> clientChannel = std::make_shared<Channel>(clientsock->fd(), m_ep);
-    clientChannel->enableRead();
-    clientChannel->setEdgeTrigger();
-    clientChannel->setReadCallBack(std::bind(&Channel::newData, clientChannel));
-    // store socket pointer and channel pointer to epoll
-    clientChannel->addSocket(clientsock->fd(), clientsock);
-    clientChannel->addChannel(m_fd, clientChannel);
-}
+// void Channel::newConnect(Socket *serversock) {
+//     InetAddress clientaddr;
+//     std::shared_ptr<Socket> clientsock = std::make_shared<Socket>(serversock->accept(clientaddr));
+//     std::cout << "clientsock = " << clientsock->fd() << std::endl;
+//     std::cout << "client ip = " << clientaddr.ip() << " , port = " << clientaddr.port() << std::endl;
+//     // add clientsock to epoll
+//     std::shared_ptr<Channel> clientChannel = std::make_shared<Channel>(clientsock->fd(), m_ep);
+//     clientChannel->enableRead();
+//     clientChannel->setEdgeTrigger();
+//     clientChannel->setReadCallBack(std::bind(&Channel::newData, clientChannel));
+//     // store socket pointer and channel pointer to epoll
+//     clientChannel->addSocket(clientsock->fd(), clientsock);
+//     clientChannel->addChannel(clientChannel->fd(), clientChannel);
+// }
 
 void Channel::newData() {
     char buffer[1024];

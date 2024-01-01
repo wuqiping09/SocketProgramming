@@ -4,7 +4,15 @@ COMPILERFLAGS = -g
 .PHONY: all clean obj debug
 
 #CPP_FILES := $(notdir $(shell find -name "*.cpp"))
-CPP_FILES := main.cpp inetaddress.cpp socket.cpp epoll.cpp channel.cpp eventloop.cpp tcpserver.cpp
+CPP_FILES := \
+	main.cpp \
+	inetaddress.cpp \
+	socket.cpp \
+	epoll.cpp \
+	channel.cpp \
+	eventloop.cpp \
+	tcpserver.cpp \
+	acceptor.cpp
 OBJ_FILES := $(patsubst %.cpp,obj/%.o,$(CPP_FILES))
 #EXE_FILES := $(patsubst %,bin/%,$(basename $(CPP_FILES)))
 EXE_FILES := bin/main

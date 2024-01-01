@@ -1,7 +1,6 @@
  #include "tcpserver.h"
  
-TCPServer::TCPServer(const std::string &ip, const uint16_t port) {
-    //Socket *socket = new Socket(createfd());
+TCPServer::TCPServer(const std::string &ip, const uint16_t port): m_el(), acceptor(new Acceptor(m_el.getep())) {
     std::shared_ptr<Socket> socket = std::make_shared<Socket>(createfd());
     InetAddress serveraddr(ip, port);
     socket->setreuseaddr(true);
@@ -10,10 +9,9 @@ TCPServer::TCPServer(const std::string &ip, const uint16_t port) {
     socket->bind(serveraddr);
     socket->listen();
 
-    //Channel *channel = new Channel(socket->fd(), m_el.getep());
     std::shared_ptr<Channel> channel = std::make_shared<Channel>(socket->fd(), m_el.getep());
     channel->enableRead();
-    channel->setReadCallBack(std::bind(&Channel::newConnect, channel, socket.get()));
+    channel->setReadCallBack(std::bind(&Acceptor::accept, acceptor.get(), socket));
 
     m_el.getep()->addSocket(socket->fd(), socket);
     m_el.getep()->addChannel(socket->fd(), channel);
