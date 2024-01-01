@@ -60,6 +60,7 @@ void Channel::handleEvent() {
 }
 
 void Channel::newData() {
+    // read
     InputData data;
     char buffer[1024];
     // use a loop to read all data when using edge trigger
@@ -80,7 +81,11 @@ void Channel::newData() {
             break;
         }
     }
+
+    // process
     ResultData result = processData(data);
+
+    // send
     send(m_fd, static_cast<void*>(result.s), result.len, 0);
 }
 
