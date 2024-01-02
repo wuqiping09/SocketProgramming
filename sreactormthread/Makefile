@@ -14,7 +14,10 @@ CPP_FILES := \
 	tcpserver.cpp \
 	acceptor.cpp \
 	connection.cpp \
-	processor.cpp
+	processor.cpp \
+	safequeue.cpp \
+	threadpool.cpp \
+	threadworker.cpp
 OBJ_FILES := $(patsubst %.cpp,obj/%.o,$(CPP_FILES))
 #EXE_FILES := $(patsubst %,bin/%,$(basename $(CPP_FILES)))
 EXE_FILES := bin/main

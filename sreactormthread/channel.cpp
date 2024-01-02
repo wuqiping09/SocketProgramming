@@ -2,8 +2,8 @@
 #include "inetaddress.h"
 #include "socket.h"
 #include "processor.h"
+#include "threadpool.h"
 #include <iostream>
-#include <thread>
 #include <future>
 
 Channel::Channel(int fd, const std::shared_ptr<Epoll> &ep): m_fd(fd), m_ep(ep), m_inepoll(false), m_event(0), m_revent(0) {
@@ -88,7 +88,10 @@ void Channel::newData() {
 
     // process
     Processor processor(data);
-    ResultData result = std::async(&Processor::processData, &processor).get();
+    std::shared_ptr<ThreadPool> pool = ThreadPool::get();
+    ResultData result = pool->submit(std::bind(&Processor::processData, &processor)).get();
+    // ResultData result = pool->submit(std::mem_fn(&Processor::processData), &processor).get();
+    // ResultData result = std::async(&Processor::processData, &processor).get();
 
     // send
     send(m_fd, static_cast<void*>(result.s), result.len, 0);

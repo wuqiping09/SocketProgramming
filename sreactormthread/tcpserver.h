@@ -4,6 +4,7 @@
 #include "eventloop.h"
 #include "socket.h"
 #include "channel.h"
+#include "threadpool.h"
 
 class TCPServer {
 public:
@@ -16,6 +17,7 @@ private:
     std::shared_ptr<Acceptor> acceptor;
     std::shared_ptr<Socket> listensock;
     std::shared_ptr<Channel> channel;
+    std::shared_ptr<ThreadPool> pool;
 };
 
 #endif

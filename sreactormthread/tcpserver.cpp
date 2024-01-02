@@ -12,6 +12,9 @@ TCPServer::TCPServer(const std::string &ip, const uint16_t port): m_el(), accept
     channel = std::make_shared<Channel>(listensock->fd(), m_el.getep());
     channel->enableRead();
     channel->setReadCallBack(std::bind(&Acceptor::accept, acceptor.get(), listensock));
+
+    pool = ThreadPool::get();
+    pool->init();
 }
 
 TCPServer::~TCPServer() {
